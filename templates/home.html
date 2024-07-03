@@ -5,6 +5,10 @@
 		<title>Jubaili Bros Hardware Interface</title>
 		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.1/css/all.css">
+		<!-- Include moment.js and moment-timezone.js -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.34/moment-timezone-with-data.min.js"></script>
+		
 	</head>
 	<body class="loggedin">
 		<nav class="navtop">
@@ -18,10 +22,12 @@
 		<div class="content">
 			<div class="section">
 				<h2>Update Device Timezone</h2>
-				<label class="label" for="minutes">Minutes: </label>
-				<input type="number" id="minutes" name="minutes">
+				<label class="label" for="timezone">Select Timezone: </label>
+				<select id="timezone" name="timezone">
+					<!-- Timezone options will be populated here -->
+				</select>
 				<button class="button" onclick="updateTimeZone()">Update</button>
-                <p>Note.</p>
+				<p>Note.</p>
 			</div>
 			<div class="section">
 				<h2>Download Log Files</h2>
@@ -29,28 +35,64 @@
 				<p>Downloaded file can be found in the output folder of the USB Drive.</p>
 			</div>
 			<div class="section">
-				<h2>Update Device frequency</h2>
-				<label class="label" for="minutes">Minutes: </label>
-				<input type="number" id="minutes" name="minutes">
+				<h2>Update Device Frequency</h2>
+				<label class="label" for="frequency">Frequency (Minutes): </label>
+				<input type="number" id="frequency" name="frequency" min="1">
 				<button class="button" onclick="updateFrequency()">Update</button>
-                <p>Note that the Minimum Response time is capped at 1 minute.</p>
+				<p>Note that the Minimum Response time is capped at 1 minute.</p>
 			</div>
 		</div>
-
+	
 		<script>
-			function downloadFile() {
-				// Add your file download logic here
-				alert("File download logic goes here.");
+			// Function to populate the timezone dropdown
+			function populateTimezones() {
+				const timezones = moment.tz.names();
+				const timezoneSelect = document.getElementById('timezone');
+	
+				timezones.forEach(timezone => {
+					const option = document.createElement('option');
+					const offset = moment.tz(timezone).utcOffset() / 60;
+					const offsetString = (offset >= 0 ? "+" : "") + offset.toString().padStart(2, '0') + ":00";
+					option.value = timezone;
+					option.textContent = `${timezone.replace('_', ' ')} (GMT${offsetString})`;
+					timezoneSelect.appendChild(option);
+				});
 			}
-
-			function updateFrequency() {
-				// Add your code for updating frequency here
-				alert("Frequency updated.");
-			}
-
+	
+			// Call the function to populate the timezone dropdown on page load
+			window.onload = populateTimezones;
+	
 			function updateTimeZone() {
-				// Add your code for updating frequency here
-				alert("Timezone updated.");
+				const timezone = document.getElementById("timezone").value;
+				const timezoneOffset = moment.tz(timezone).format('Z');
+				alert(`Timezone updated to ${timezone.replace('_', ' ')}. Time difference from GMT: ${timezoneOffset}`);
+			}
+	
+			function downloadFile() {
+				// Implement the logic to copy desk.csv from the desktop to the USB drive
+				fetch('/download_log')
+					.then(response => response.text())
+					.then(data => alert(data))
+					.catch(error => alert(`Error: ${error}`));
+			}
+	
+			function updateFrequency() {
+				const frequency = document.getElementById("frequency").value;
+				if (frequency < 1) {
+					alert("Frequency cannot be less than 1 minute.");
+					return;
+				}
+				// Implement the logic to update crontab with the new frequency value
+				fetch('/update_frequency', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ frequency: frequency }),
+				})
+				.then(response => response.text())
+				.then(data => alert(data))
+				.catch(error => alert(`Error: ${error}`));
 			}
 		</script>
 	</body>
