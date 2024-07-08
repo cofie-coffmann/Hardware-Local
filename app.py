@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, send_file, jsonify
 import subprocess
 import shutil
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
@@ -90,18 +90,26 @@ def logout():
 @login_required
 def download_log():
     try:
-        source = '/home/pi/Desktop/desk.csv'
-        destination = '/media/pi/USB_DRIVE/output/desk.csv'  # Adjust this path based on your actual USB drive path
-
+        source = '/home/edge/local/static/style.css'
+        usb_mount_point = '/mnt/usb'
+        usb_destination = os.path.join(usb_mount_point, 'output', 'desk.csv')
+        
+        # Mount the USB drive
+        os.system('sudo mount /dev/sda1 ' + usb_mount_point)
+        
         # Ensure the output folder exists
-        os.makedirs(os.path.dirname(destination), exist_ok=True)
-
-        # Copy the file
-        shutil.copy(source, destination)
-
-        return "File has been copied to the USB drive."
+        os.makedirs(os.path.dirname(usb_destination), exist_ok=True)
+        
+        # Copy the file to the USB drive
+        shutil.copy(source, usb_destination)
+        
+        # Unmount the USB drive
+        os.system('sudo umount ' + usb_mount_point)
+        
+        # Prepare the file for download
+        return send_file(source, as_attachment=True, attachment_filename='desk.csv')
     except Exception as e:
-        return f"Error: {str(e)}"
+        return jsonify(error=str(e)), 500
 
 @app.route('/update_frequency', methods=['POST'])
 @login_required
